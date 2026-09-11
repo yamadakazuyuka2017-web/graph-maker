@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>かんたんグラフメーカー iPad版</title>
+<style>
+:root{
+  --bg:#f5f7fb;--card:#ffffff;--text:#1f2937;--muted:#64748b;--line:#cbd5e1;
+  --accent:#2563eb;--danger:#b91c1c;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--text)}
+header{background:#fff;border-bottom:1px solid var(--line);padding:20px 16px}
+header .wrap{max-width:1280px;margin:auto}
+h1{margin:0;font-size:clamp(24px,4vw,34px)}
+header p{margin:8px 0 0;color:var(--muted)}
+main{max-width:1280px;margin:20px auto 40px;padding:0 14px}
+.grid{display:grid;grid-template-columns:minmax(360px,470px) 1fr;gap:18px;align-items:start}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:17px;box-shadow:0 6px 18px rgba(15,23,42,.05)}
+h2{font-size:18px;margin:0 0 13px}
+label{display:block;font-size:13px;font-weight:700;margin:0 0 5px}
+input,textarea{width:100%;border:2px solid #64748b;border-radius:10px;background:#fff;color:#111827;font-size:18px;padding:11px 12px;min-height:52px;-webkit-appearance:none;appearance:none}
+textarea{min-height:110px;resize:vertical}
+input:focus,textarea:focus{outline:4px solid rgba(37,99,235,.18);border-color:var(--accent)}
+.axis-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:17px}
+.app-status{margin-bottom:13px;padding:10px 12px;border-radius:10px;background:#fffbeb;border:1px solid #f59e0b;color:#78350f;font-size:13px;font-weight:700}
+.app-status.ok{background:#ecfdf5;border-color:#34d399;color:#065f46}
+.series-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.series-tabs{display:flex;gap:7px;flex-wrap:wrap;flex:1}
+button{border:0;border-radius:11px;min-height:44px;padding:10px 14px;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation}
+.primary{background:var(--accent);color:#fff}
+.secondary{background:#e2e8f0;color:#0f172a}
+.danger{background:#fee2e2;color:var(--danger)}
+.tab{background:#eef2f7;border:1px solid #cbd5e1;color:#334155;display:inline-flex;align-items:center;gap:7px}
+.tab.active{background:#fff;border:2px solid var(--accent);color:#0f172a}
+.dot{width:13px;height:13px;border-radius:50%;display:inline-block}
+.series-meta{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px}
+.check-wrap{display:flex;gap:8px;align-items:center;min-height:52px}
+.check-wrap input{width:22px;height:22px;min-height:0}
+.check-wrap label{margin:0;white-space:nowrap}
+.table-wrap{max-height:540px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+table{width:100%;border-collapse:collapse;min-width:360px}
+th,td{padding:7px;border-bottom:1px solid #e2e8f0;text-align:center}
+th{position:sticky;top:0;background:#f8fafc;z-index:2;font-size:13px}
+td:first-child{width:48px;color:#64748b;font-weight:700}
+td:last-child{width:52px}
+td input{min-width:105px}
+.button-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.bulk{margin-top:13px;padding:12px;background:#f8fafc;border:1px solid var(--line);border-radius:12px}
+.small{font-size:12px;color:var(--muted);line-height:1.6}
+.graph-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{background:#eef2f7;border:1px solid #cbd5e1;color:#334155}
+.toggle.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.graph-wrap{margin-top:13px;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:auto}
+svg{display:block;width:100%;min-width:680px;height:auto}
+.results{display:grid;gap:10px;margin-top:14px}
+.result{border:1px solid var(--line);border-radius:12px;background:#fbfdff;padding:12px}
+.result-head{display:flex;gap:8px;align-items:center;font-weight:800}
+.result .formula{font-size:19px;font-weight:800;margin-top:6px}
+.result .sub{font-size:13px;color:var(--muted);margin-top:5px}
+.note{font-size:12px;color:var(--muted);line-height:1.6;margin-top:10px}
+@media(max-width:980px){.grid{grid-template-columns:1fr}}
+@media(max-width:560px){.axis-grid,.series-meta{grid-template-columns:1fr}.card{padding:13px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>かんたんグラフメーカー</h1>
+  <p>iPadでの入力とグラフ表示を優先した互換版です。</p>
+</div></header>
+
+<main>
+<div class="grid">
+<section class="card">
+  <div id="appStatus" class="app-status">アプリを準備しています…</div>
+
+  <h2>1. 軸の設定</h2>
+  <div class="axis-grid">
+    <div><label for="xName">x軸の名前</label><input id="xName" type="text" value="時間"></div>
+    <div><label for="xUnit">x軸の単位</label><input id="xUnit" type="text" value="s"></div>
+    <div><label for="yName">y軸の名前</label><input id="yName" type="text" value="距離"></div>
+    <div><label for="yUnit">y軸の単位</label><input id="yUnit" type="text" value="cm"></div>
+  </div>
+
+  <h2>2. データ系列</h2>
+  <div class="series-toolbar">
+    <div id="seriesTabs" class="series-tabs"></div>
+    <button id="addSeriesBtn" class="primary" type="button">＋ データ系列</button>
+  </div>
+
+  <div class="series-meta">
+    <div>
+      <label for="seriesName">データ名</label>
+      <input id="seriesName" type="text" value="データA">
+    </div>
+    <div class="check-wrap">
+      <input id="seriesVisible" type="checkbox" checked>
+      <label for="seriesVisible">表示</label>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>No.</th><th>x</th><th>y</th><th>削除</th></tr></thead>
+      <tbody id="dataBody">
+        <tr><td>1</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>2</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>3</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>4</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>5</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>6</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>7</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>8</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>9</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>10</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>11</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+        <tr><td>12</td><td><input class="xVal" type="text" inputmode="decimal" placeholder="数値"></td><td><input class="yVal" type="text" inputmode="decimal" placeholder="数値"></td><td><button type="button" class="danger delRow">×</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="button-row">
+    <button id="add1Btn" class="primary" type="button">＋1行</button>
+    <button id="add10Btn" class="secondary" type="button">＋10行</button>
+    <button id="add50Btn" class="secondary" type="button">＋50行</button>
+    <button id="clearBtn" class="danger" type="button">この系列をクリア</button>
+  </div>
+
+  <div class="bulk">
+    <strong>まとめて貼り付け</strong>
+    <p class="small">Excelやスプレッドシートの2列をそのまま貼り付けできます。</p>
+    <textarea id="bulkInput" placeholder="1    2.1
+2    4.0
+3    6.2"></textarea>
+    <div class="button-row">
+      <button id="bulkAddBtn" class="primary" type="button">追加</button>
+      <button id="bulkReplaceBtn" class="secondary" type="button">置き換え</button>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="graph-head">
+    <div>
+      <h2>3. グラフ</h2>
+      <div id="graphStatus" class="small">「グラフを表示・更新」を押してください。</div>
+    </div>
+    <div class="controls">
+      <button id="pointsBtn" class="toggle active" type="button">測定点</button>
+      <button id="lineBtn" class="toggle" type="button">直線</button>
+      <button id="curveBtn" class="toggle" type="button">曲線</button>
+      <button id="bestBtn" class="toggle active" type="button">最適近似</button>
+    </div>
+  </div>
+
+  <div class="button-row" style="margin-top:14px">
+    <button id="drawBtn" class="primary" type="button">グラフを表示・更新</button>
+    <button id="analyzeBtn" class="secondary" type="button">関係式・相関係数を表示</button>
+  </div>
+
+  <div class="graph-wrap">
+    <svg id="graph" viewBox="0 0 900 590" aria-label="グラフ">
+      <rect x="95" y="70" width="770" height="400" rx="10" fill="#f8fafc"></rect>
+      <text x="450" y="275" text-anchor="middle" fill="#64748b" font-size="18">データ入力後、「グラフを表示・更新」を押してください</text>
+    </svg>
+  </div>
+
+  <div class="button-row">
+    <button id="savePngBtn" class="secondary" type="button">PNGで保存</button>
+    <button id="saveJpegBtn" class="secondary" type="button">JPEGで保存</button>
+    <button id="saveSvgBtn" class="secondary" type="button">SVGで保存</button>
+    <button id="printBtn" class="secondary" type="button">印刷・PDF保存</button>
+  </div>
+
+  <div id="analysisResults" class="results" style="display:none"></div>
+
+  <p class="note">最大8系列・各系列500組まで。負の値が入力された軸だけ、マイナス領域を表示します。</p>
+</section>
+</div>
+</main>
+
+<script>
+(function(){
+'use strict';
+
+var COLORS=['#0f766e','#2563eb','#c2410c','#7c3aed','#be123c','#15803d','#a16207','#0369a1'];
+var MAX_SERIES=8,MAX_ROWS=500;
+var series=[{name:'データA',visible:true,rows:[]}];
+var activeIndex=0,showPoints=true,modelMode='best',analysisVisible=false;
+
+var appStatus=document.getElementById('appStatus');
+var body=document.getElementById('dataBody');
+var tabs=document.getElementById('seriesTabs');
+var graph=document.getElementById('graph');
+var graphStatus=document.getElementById('graphStatus');
+var xName=document.getElementById('xName'),xUnit=document.getElementById('xUnit');
+var yName=document.getElementById('yName'),yUnit=document.getElementById('yUnit');
+var seriesName=document.getElementById('seriesName'),seriesVisible=document.getElementById('seriesVisible');
+var bulkInput=document.getElementById('bulkInput');
+var analysisResults=document.getElementById('analysisResults');
+
+function normalizeNumberText(v){
+  return String(v).replace(/^\s+|\s+$/g,'')
+    .replace(/[０-９]/g,function(ch){return String.fromCharCode(ch.charCodeAt(0)-0xFEE0);})
+    .replace(/[．。]/g,'.').replace(/[，]/g,',').replace(/[−ー―‐‑–—]/g,'-').replace(/,/g,'');
+}
+function toNumber(v){
+  var s=normalizeNumberText(v);
+  if(s==='')return NaN;
+  return Number(s);
+}
+function fmt(n){
+  if(!isFinite(n))return '—';
+  var a=Math.abs(n);
+  if(a!==0&&(a>=10000||a<0.001))return n.toExponential(3);
+  return String(Number(n.toFixed(4)));
+}
+function isZero(n){return isFinite(n)&&Number(n.toFixed(4))===0;}
+function signed(n,suffix){suffix=suffix||'';return n<0?'− '+fmt(Math.abs(n))+suffix:'+ '+fmt(n)+suffix;}
+function lineFormula(m){
+  if(!m)return '—';
+  var s='y = '+fmt(m.a)+'x';
+  if(!isZero(m.b))s+=' '+signed(m.b,'');
+  return s;
+}
+function curveFormula(m){
+  if(!m)return '—';
+  var s='y = '+fmt(m.a)+'x²';
+  if(!isZero(m.b))s+=' '+signed(m.b,'x');
+  if(!isZero(m.c))s+=' '+signed(m.c,'');
+  return s;
+}
+function mean(arr){var s=0,i;for(i=0;i<arr.length;i++)s+=arr[i];return s/arr.length;}
+function linear(data){
+  if(data.length<2)return null;
+  var n=data.length,xs=[],ys=[],i,mx,my,sxx=0,syy=0,sxy=0,dx,dy,a,b,r,ssr=0,sst=0,p,r2,adj;
+  for(i=0;i<n;i++){xs.push(data[i].x);ys.push(data[i].y);}
+  mx=mean(xs);my=mean(ys);
+  for(i=0;i<n;i++){dx=data[i].x-mx;dy=data[i].y-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy;}
+  if(sxx===0)return null;
+  a=sxy/sxx;b=my-a*mx;r=syy===0?null:sxy/Math.sqrt(sxx*syy);
+  for(i=0;i<n;i++){p=a*data[i].x+b;ssr+=(data[i].y-p)*(data[i].y-p);sst+=(data[i].y-my)*(data[i].y-my);}
+  r2=sst===0?null:1-ssr/sst;adj=(r2!==null&&n>2)?1-(1-r2)*(n-1)/(n-2):r2;
+  return{a:a,b:b,r:r,r2:r2,adj:adj,predict:function(x){return a*x+b;}};
+}
+function solve3(A,b){
+  var M=[],i,j,c,p,r,d,f,tmp;
+  for(i=0;i<3;i++){M[i]=[A[i][0],A[i][1],A[i][2],b[i]];}
+  for(c=0;c<3;c++){
+    p=c;
+    for(r=c+1;r<3;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+    if(Math.abs(M[p][c])<1e-12)return null;
+    tmp=M[c];M[c]=M[p];M[p]=tmp;
+    d=M[c][c];for(j=c;j<4;j++)M[c][j]/=d;
+    for(r=0;r<3;r++)if(r!==c){f=M[r][c];for(j=c;j<4;j++)M[r][j]-=f*M[c][j];}
+  }
+  return[M[0][3],M[1][3],M[2][3]];
+}
+function quadratic(data){
+  if(data.length<3)return null;
+  var sx=0,sx2=0,sx3=0,sx4=0,sy=0,sxy=0,sx2y=0,n=data.length,i,x,y,x2,sol,a,b,c,my,ssr=0,sst=0,p,r2,adj;
+  for(i=0;i<n;i++){x=data[i].x;y=data[i].y;x2=x*x;sx+=x;sx2+=x2;sx3+=x2*x;sx4+=x2*x2;sy+=y;sxy+=x*y;sx2y+=x2*y;}
+  sol=solve3([[sx4,sx3,sx2],[sx3,sx2,sx],[sx2,sx,n]],[sx2y,sxy,sy]);if(!sol)return null;
+  a=sol[0];b=sol[1];c=sol[2];my=sy/n;
+  for(i=0;i<n;i++){p=a*data[i].x*data[i].x+b*data[i].x+c;ssr+=(data[i].y-p)*(data[i].y-p);sst+=(data[i].y-my)*(data[i].y-my);}
+  r2=sst===0?null:1-ssr/sst;adj=(r2!==null&&n>3)?1-(1-r2)*(n-1)/(n-3):r2;
+  return{a:a,b:b,c:c,r2:r2,adj:adj,predict:function(xx){return a*xx*xx+b*xx+c;}};
+}
+function chooseBest(lr,qr,n){
+  if(!lr&&!qr)return null;
+  if(lr&&!qr)return{type:'line',model:lr};
+  if(!lr&&qr)return{type:'curve',model:qr};
+  if(n<4)return{type:'line',model:lr};
+  var la=isFinite(lr.adj)?lr.adj:-999,qa=isFinite(qr.adj)?qr.adj:-999;
+  return qa-la>=0.02?{type:'curve',model:qr}:{type:'line',model:lr};
+}
+function corrText(r){
+  if(!isFinite(r))return'判定できません';
+  var a=Math.abs(r),dir=r>0?'正の相関':r<0?'負の相関':'相関なし';
+  if(a>=0.9)return'非常に強い'+dir;
+  if(a>=0.7)return'強い'+dir;
+  if(a>=0.4)return'中程度の'+dir;
+  if(a>=0.2)return'弱い'+dir;
+  return'ほとんど直線的な相関はありません';
+}
+function syncCurrentFromTable(){
+  var rows=body.getElementsByTagName('tr'),out=[],i,xel,yel;
+  for(i=0;i<rows.length;i++){
+    xel=rows[i].querySelector('.xVal');yel=rows[i].querySelector('.yVal');
+    out.push({x:xel?xel.value:'',y:yel?yel.value:''});
+  }
+  series[activeIndex].rows=out;
+  series[activeIndex].name=seriesName.value||('データ'+(activeIndex+1));
+  series[activeIndex].visible=seriesVisible.checked;
+}
+function dataOf(s){
+  var out=[],i,x,y;
+  for(i=0;i<s.rows.length;i++){
+    if(String(s.rows[i].x).replace(/\s/g,'')===''&&String(s.rows[i].y).replace(/\s/g,'')==='')continue;
+    x=toNumber(s.rows[i].x);y=toNumber(s.rows[i].y);
+    if(isFinite(x)&&isFinite(y))out.push({x:x,y:y});
+  }
+  return out;
+}
+function makeRow(x,y){
+  var tr=document.createElement('tr'),td1=document.createElement('td'),td2=document.createElement('td'),td3=document.createElement('td'),td4=document.createElement('td');
+  var xi=document.createElement('input'),yi=document.createElement('input'),del=document.createElement('button');
+  td1.textContent=String(body.rows.length+1);
+  xi.type='text';xi.inputMode='decimal';xi.className='xVal';xi.placeholder='数値';xi.value=x||'';
+  yi.type='text';yi.inputMode='decimal';yi.className='yVal';yi.placeholder='数値';yi.value=y||'';
+  del.type='button';del.className='danger delRow';del.textContent='×';
+  td2.appendChild(xi);td3.appendChild(yi);td4.appendChild(del);tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);tr.appendChild(td4);
+  body.appendChild(tr);
+  del.addEventListener('click',function(){tr.parentNode.removeChild(tr);renumber();syncCurrentFromTable();});
+}
+function renumber(){var rows=body.getElementsByTagName('tr'),i;for(i=0;i<rows.length;i++)rows[i].cells[0].textContent=String(i+1);}
+function renderEditor(){
+  var s=series[activeIndex],i;
+  seriesName.value=s.name;seriesVisible.checked=s.visible;
+  body.innerHTML='';
+  for(i=0;i<s.rows.length;i++)makeRow(s.rows[i].x,s.rows[i].y);
+  if(!s.rows.length)for(i=0;i<12;i++)makeRow('','');
+}
+function renderTabs(){
+  tabs.innerHTML='';
+  var i,b,dot,txt;
+  for(i=0;i<series.length;i++){
+    b=document.createElement('button');b.type='button';b.className='tab'+(i===activeIndex?' active':'');
+    dot=document.createElement('span');dot.className='dot';dot.style.background=COLORS[i%COLORS.length];
+    txt=document.createElement('span');txt.textContent=series[i].name;
+    b.appendChild(dot);b.appendChild(txt);
+    (function(idx){b.addEventListener('click',function(){syncCurrentFromTable();activeIndex=idx;renderEditor();renderTabs();});})(i);
+    tabs.appendChild(b);
+  }
+}
+function addRows(n){
+  var i;syncCurrentFromTable();
+  if(series[activeIndex].rows.length+n>MAX_ROWS)n=MAX_ROWS-series[activeIndex].rows.length;
+  for(i=0;i<n;i++)series[activeIndex].rows.push({x:'',y:''});
+  renderEditor();
+}
+function parseBulk(t){
+  var lines=t.split(/\r?\n/),out=[],i,p,x,y;
+  for(i=0;i<lines.length;i++){
+    if(!lines[i].replace(/\s/g,''))continue;
+    p=lines[i].replace(/,/g,' ').replace(/;/g,' ').replace(/\t/g,' ').split(/\s+/);
+    if(p.length<2)continue;
+    x=toNumber(p[0]);y=toNumber(p[1]);
+    if(isFinite(x)&&isFinite(y))out.push({x:String(x),y:String(y)});
+  }
+  return out;
+}
+function modelInfo(s){
+  var data=dataOf(s),lr=linear(data),qr=quadratic(data),chosen=null,R;
+  if(modelMode==='line')chosen=lr?{type:'line',model:lr}:null;
+  else if(modelMode==='curve')chosen=qr?{type:'curve',model:qr}:null;
+  else chosen=chooseBest(lr,qr,data.length);
+  if(!chosen)return{data:data,chosen:null,formula:'—',corr:'—',detail:'—'};
+  if(chosen.type==='line')return{data:data,chosen:chosen,formula:lineFormula(chosen.model),corr:isFinite(chosen.model.r)?'r = '+fmt(chosen.model.r):'—',detail:isFinite(chosen.model.r)?corrText(chosen.model.r):'—'};
+  R=isFinite(chosen.model.r2)?Math.sqrt(Math.max(0,chosen.model.r2)):null;
+  return{data:data,chosen:chosen,formula:curveFormula(chosen.model),corr:isFinite(R)?'R = '+fmt(R):'—',detail:isFinite(chosen.model.r2)?'R² = '+fmt(chosen.model.r2):'—'};
+}
+function tickStep(range){
+  if(!isFinite(range)||range<=0)return 1;
+  var raw=range/5,pow=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10)),n=raw/pow;
+  return(n>=5?5:n>=2?2:1)*pow;
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+}
+function drawGraph(){
+  syncCurrentFromTable();
+  renderTabs();
+
+  var visible=[],all=[],i,j,d,info,total,L=96,R=34,T=76,B=92,W=900,H=590;
+  for(i=0;i<series.length;i++){
+    if(!series[i].visible)continue;
+    d=dataOf(series[i]);
+    if(d.length){visible.push({s:series[i],index:i,data:d});for(j=0;j<d.length;j++)all.push(d[j]);}
+  }
+  if(!all.length){
+    graphStatus.textContent='有効な x・y データを入力してください。';
+    graph.setAttribute('viewBox','0 0 900 590');
+    graph.innerHTML='<rect x="95" y="70" width="770" height="400" rx="10" fill="#f8fafc"></rect><text x="450" y="275" text-anchor="middle" fill="#64748b" font-size="18">有効な x・y データがありません</text>';
+    return;
+  }
+  total=all.length;
+  graphStatus.textContent=visible.length+'系列・'+total+'組のデータを表示しています。';
+
+  var xmin=all[0].x,xmax=all[0].x,ymin=all[0].y,ymax=all[0].y;
+  for(i=1;i<all.length;i++){if(all[i].x<xmin)xmin=all[i].x;if(all[i].x>xmax)xmax=all[i].x;if(all[i].y<ymin)ymin=all[i].y;if(all[i].y>ymax)ymax=all[i].y;}
+  var hasNegX=xmin<0,hasNegY=ymin<0,xr,yr;
+  if(!hasNegX)xmin=0;if(!hasNegY)ymin=0;if(xmax<0)xmax=0;if(ymax<0)ymax=0;
+  if(xmin===xmax)xmax=xmin+1;if(ymin===ymax)ymax=ymin+1;
+  xr=xmax-xmin;yr=ymax-ymin;
+  if(hasNegX)xmin-=xr*.05;if(xmax>0)xmax+=xr*.06;if(hasNegY)ymin-=yr*.06;if(ymax>0)ymax+=yr*.08;
+
+  function X(x){return L+(x-xmin)/(xmax-xmin)*(W-L-R);}
+  function Y(y){return T+(ymax-y)/(ymax-ymin)*(H-T-B);}
+
+  var xs=tickStep(xmax-xmin),ys=tickStep(ymax-ymin),xStart=Math.ceil(xmin/xs)*xs,yStart=Math.ceil(ymin/ys)*ys;
+  var out='<defs><clipPath id="plotClip"><rect x="'+L+'" y="'+T+'" width="'+(W-L-R)+'" height="'+(H-T-B)+'"></rect></clipPath></defs>';
+  out+='<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#ffffff"></rect>';
+
+  var lx=L,ly=28,color,name;
+  for(i=0;i<visible.length;i++){
+    color=COLORS[visible[i].index%COLORS.length];name=visible[i].s.name;
+    out+='<circle cx="'+lx+'" cy="'+ly+'" r="7" fill="'+color+'"></circle><text x="'+(lx+13)+'" y="'+(ly+5)+'" fill="#334155" font-size="14" font-weight="700">'+esc(name)+'</text>';
+    lx+=Math.min(180,55+name.length*15);if(lx>W-160){lx=L;ly+=24;}
+  }
+
+  out+='<rect x="'+L+'" y="'+T+'" width="'+(W-L-R)+'" height="'+(H-T-B)+'" rx="10" fill="#fff" stroke="#dbe3ee"></rect>';
+  var v,px,py;
+  for(v=xStart;v<=xmax+xs*.001;v+=xs){px=X(v);out+='<line x1="'+px+'" y1="'+T+'" x2="'+px+'" y2="'+(H-B)+'" stroke="#e5e7eb"></line><text x="'+px+'" y="'+(H-B+24)+'" text-anchor="middle" fill="#64748b" font-size="13">'+esc(fmt(v))+'</text>';}
+  for(v=yStart;v<=ymax+ys*.001;v+=ys){py=Y(v);out+='<line x1="'+L+'" y1="'+py+'" x2="'+(W-R)+'" y2="'+py+'" stroke="#e5e7eb"></line><text x="'+(L-11)+'" y="'+(py+4)+'" text-anchor="end" fill="#64748b" font-size="13">'+esc(fmt(v))+'</text>';}
+
+  var xAxisY=(0>=ymin&&0<=ymax)?Y(0):H-B,yAxisX=(0>=xmin&&0<=xmax)?X(0):L;
+  out+='<line x1="'+L+'" y1="'+xAxisY+'" x2="'+(W-R)+'" y2="'+xAxisY+'" stroke="#111827" stroke-width="2.4"></line>';
+  out+='<line x1="'+yAxisX+'" y1="'+T+'" x2="'+yAxisX+'" y2="'+(H-B)+'" stroke="#111827" stroke-width="2.4"></line>';
+  out+='<path d="M '+(W-R-9)+' '+(xAxisY-5)+' L '+(W-R)+' '+xAxisY+' L '+(W-R-9)+' '+(xAxisY+5)+'" fill="none" stroke="#111827" stroke-width="2"></path>';
+  out+='<path d="M '+(yAxisX-5)+' '+(T+9)+' L '+yAxisX+' '+T+' L '+(yAxisX+5)+' '+(T+9)+'" fill="none" stroke="#111827" stroke-width="2"></path>';
+
+  var xt=(xName.value||'x')+(xUnit.value?'（'+xUnit.value+'）':''),yt=(yName.value||'y')+(yUnit.value?'（'+yUnit.value+'）':'');
+  out+='<text x="'+((L+W-R)/2)+'" y="'+(H-B+60)+'" text-anchor="middle" fill="#111827" font-size="18" font-weight="700">'+esc(xt)+'</text>';
+  out+='<text transform="translate(25 '+((T+H-B)/2)+') rotate(-90)" text-anchor="middle" fill="#111827" font-size="18" font-weight="700">'+esc(yt)+'</text>';
+
+  var c,k,path,xv,yv,radius;
+  for(i=0;i<visible.length;i++){
+    color=COLORS[visible[i].index%COLORS.length];info=modelInfo(visible[i].s);c=info.chosen;
+    if(c){
+      if(c.type==='line'){
+        out+='<line x1="'+X(xmin)+'" y1="'+Y(c.model.predict(xmin))+'" x2="'+X(xmax)+'" y2="'+Y(c.model.predict(xmax))+'" stroke="'+color+'" stroke-width="3.4" clip-path="url(#plotClip)"></line>';
+      }else{
+        path='';
+        for(k=0;k<=180;k++){xv=xmin+(xmax-xmin)*k/180;yv=c.model.predict(xv);path+=(k?'L':'M')+X(xv).toFixed(2)+','+Y(yv).toFixed(2)+' ';}
+        out+='<path d="'+path+'" fill="none" stroke="'+color+'" stroke-width="3.4" clip-path="url(#plotClip)"></path>';
+      }
+    }
+    if(showPoints){
+      radius=total>300?5.5:total>120?7.5:10;
+      for(j=0;j<visible[i].data.length;j++){
+        out+='<circle cx="'+X(visible[i].data[j].x)+'" cy="'+Y(visible[i].data[j].y)+'" r="'+radius+'" fill="'+color+'" stroke="#fff" stroke-width="2.2"></circle>';
+      }
+    }
+  }
+
+  graph.innerHTML=out;
+}
+function showAnalysis(){
+  syncCurrentFromTable();
+  analysisResults.innerHTML='';analysisResults.style.display='grid';
+  var i,info,card,head,dot,label,formula,sub,count=0;
+  for(i=0;i<series.length;i++){
+    if(!series[i].visible)continue;
+    info=modelInfo(series[i]);if(info.data.length<2)continue;
+    card=document.createElement('div');card.className='result';
+    head=document.createElement('div');head.className='result-head';
+    dot=document.createElement('span');dot.className='dot';dot.style.background=COLORS[i%COLORS.length];
+    label=document.createElement('span');label.textContent=series[i].name;
+    head.appendChild(dot);head.appendChild(label);
+    formula=document.createElement('div');formula.className='formula';formula.textContent=info.formula;
+    sub=document.createElement('div');sub.className='sub';sub.textContent='相関：'+info.corr+'　'+info.detail;
+    card.appendChild(head);card.appendChild(formula);card.appendChild(sub);analysisResults.appendChild(card);count++;
+  }
+  if(!count){analysisResults.innerHTML='<div class="result">解析できるデータがありません。</div>';}
+  analysisVisible=true;
+  drawGraph();
+}
+function setMode(mode){
+  modelMode=mode;
+  document.getElementById('lineBtn').className='toggle'+(mode==='line'?' active':'');
+  document.getElementById('curveBtn').className='toggle'+(mode==='curve'?' active':'');
+  document.getElementById('bestBtn').className='toggle'+(mode==='best'?' active':'');
+  drawGraph();
+}
+function graphFileBase(){return 'graph_'+(xName.value||'x')+'_'+(yName.value||'y');}
+function serializedSvg(){
+  var clone=graph.cloneNode(true),vb=graph.getAttribute('viewBox').split(/\s+/);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width',vb[2]);clone.setAttribute('height',vb[3]);
+  return new XMLSerializer().serializeToString(clone);
+}
+function downloadBlob(blob,name){
+  var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+function saveSvg(){downloadBlob(new Blob([serializedSvg()],{type:'image/svg+xml;charset=utf-8'}),graphFileBase()+'.svg');}
+function saveRaster(type){
+  var text=serializedSvg(),url=URL.createObjectURL(new Blob([text],{type:'image/svg+xml;charset=utf-8'})),img=new Image();
+  img.onload=function(){
+    var vb=graph.getAttribute('viewBox').split(/\s+/),canvas=document.createElement('canvas'),ctx;
+    canvas.width=Number(vb[2])*2;canvas.height=Number(vb[3])*2;ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);
+    canvas.toBlob(function(blob){if(blob)downloadBlob(blob,graphFileBase()+(type==='image/png'?'.png':'.jpg'));},type,type==='image/jpeg'?0.95:undefined);
+  };
+  img.src=url;
+}
+function printGraph(){
+  var w=window.open('','_blank');if(!w){alert('ポップアップを許可してください。');return;}
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><style>body{margin:20px;font-family:sans-serif}svg{width:100%;height:auto}@media print{button{display:none}}</style></head><body>'+serializedSvg()+'<p><button onclick="window.print()">印刷・PDF保存</button></p></body></html>');w.document.close();
+}
+
+function init(){
+  var i,rows=body.getElementsByTagName('tr');
+  for(i=0;i<rows.length;i++)series[0].rows.push({x:'',y:''});
+  var dels=body.querySelectorAll('.delRow');
+  for(i=0;i<dels.length;i++)dels[i].addEventListener('click',function(){var tr=this.parentNode.parentNode;tr.parentNode.removeChild(tr);renumber();syncCurrentFromTable();});
+  renderTabs();
+  appStatus.textContent='アプリ動作中：数値を入力して「グラフを表示・更新」を押してください。';
+  appStatus.className='app-status ok';
+}
+
+document.getElementById('addSeriesBtn').addEventListener('click',function(){
+  syncCurrentFromTable();if(series.length>=MAX_SERIES){alert('最大8系列です。');return;}
+  series.push({name:'データ'+String.fromCharCode(65+series.length),visible:true,rows:[]});activeIndex=series.length-1;
+  renderEditor();renderTabs();
+});
+seriesName.addEventListener('change',function(){syncCurrentFromTable();renderTabs();});
+seriesVisible.addEventListener('change',function(){syncCurrentFromTable();});
+document.getElementById('add1Btn').addEventListener('click',function(){addRows(1);});
+document.getElementById('add10Btn').addEventListener('click',function(){addRows(10);});
+document.getElementById('add50Btn').addEventListener('click',function(){addRows(50);});
+document.getElementById('clearBtn').addEventListener('click',function(){series[activeIndex].rows=[];var i;for(i=0;i<12;i++)series[activeIndex].rows.push({x:'',y:''});renderEditor();});
+document.getElementById('bulkAddBtn').addEventListener('click',function(){syncCurrentFromTable();var a=parseBulk(bulkInput.value),i;for(i=0;i<a.length&&series[activeIndex].rows.length<MAX_ROWS;i++)series[activeIndex].rows.push(a[i]);renderEditor();});
+document.getElementById('bulkReplaceBtn').addEventListener('click',function(){series[activeIndex].rows=parseBulk(bulkInput.value);renderEditor();});
+document.getElementById('pointsBtn').addEventListener('click',function(){showPoints=!showPoints;this.className='toggle'+(showPoints?' active':'');drawGraph();});
+document.getElementById('lineBtn').addEventListener('click',function(){setMode('line');});
+document.getElementById('curveBtn').addEventListener('click',function(){setMode('curve');});
+document.getElementById('bestBtn').addEventListener('click',function(){setMode('best');});
+document.getElementById('drawBtn').addEventListener('click',drawGraph);
+document.getElementById('analyzeBtn').addEventListener('click',showAnalysis);
+document.getElementById('savePngBtn').addEventListener('click',function(){saveRaster('image/png');});
+document.getElementById('saveJpegBtn').addEventListener('click',function(){saveRaster('image/jpeg');});
+document.getElementById('saveSvgBtn').addEventListener('click',saveSvg);
+document.getElementById('printBtn').addEventListener('click',printGraph);
+
+window.onerror=function(){appStatus.textContent='アプリの処理でエラーが発生しました。Safariで開き直してください。';appStatus.className='app-status';};
+init();
+})();
+</script>
+</body>
+</html>
